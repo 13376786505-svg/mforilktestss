@@ -1,0 +1,62 @@
+name: ChmlFrp VNC 远程桌面
+on:
+  workflow_dispatch: # 仅支持手动触发，避免误跑浪费资源
+
+jobs:
+  vnc-session:
+    runs-on: windows-latest
+    steps:
+      - name: 开启远程桌面与防火墙规则
+        run: |
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+      
+      - name: 安装 TightVNC 2.8.81 服务端
+        run: |
+          Invoke-WebRequest -Uri "https://www.tightvnc.com/download/2.8.81/tightvnc-2.8.81-gpl-setup-64bit.msi" -OutFile "$env:TEMP\vnc.msi"
+          msiexec /i "$env:TEMP\vnc.msi" /quiet /norestart ADDLOCAL="Server" SET_USECONTROLAUTHENTICATION=0 SET_PASSWORD="VncPass2026!"
+      
+      - name: 下载 ChmlFrp Windows 客户端
+        run: |
+          Invoke-WebRequest -Uri "https://chmlfrp.cn/download/chmlfrp-windows-amd64.exe" -OutFile "C:\chmlfrp.exe"
+      
+      - name: 生成 ChmlFrp 配置文件
+        run: |
+          @"
+
+serverAddr = "hn.frp.one"
+serverPort = 7005
+user = "X3FiCMWRDg9LSyOSuOhd88MJ"
+dnsServer = "223.6.6.6"
+
+[auth]
+method = "token"
+token = "ChmlFrpToken"
+
+[transport]
+tcpMux = true
+protocol = "tcp"
+tls.enable = false
+
+[[proxies]]
+name = "GitHub1"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 5900
+remotePort = 40421
+
+[proxies.transport]
+useEncryption = false
+useCompression = false
+"@ | Out-File -FilePath "C:\frpc.toml" -Encoding utf8
+      
+      - name: 启动 ChmlFrp 穿透隧道
+        run: |
+          Start-Process -FilePath "C:\chmlfrp.exe" -ArgumentList "-c C:\frpc.toml"
+      
+      - name: 保持虚拟机运行6小时
+        run: |
+          for ($i=0; $i -lt 360; $i++) {
+            Write-Host "会话存活中：第 $i 分钟"
+            Start-Sleep -Seconds 60
+          }
