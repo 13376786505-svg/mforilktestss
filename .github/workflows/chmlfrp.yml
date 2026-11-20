@@ -23,7 +23,6 @@ jobs:
       - name: 生成 ChmlFrp 配置文件
         run: |
           @"
-
 serverAddr = "hn.frp.one"
 serverPort = 7005
 user = "X3FiCMWRDg9LSyOSuOhd88MJ"
