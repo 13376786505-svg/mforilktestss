@@ -11,11 +11,12 @@ jobs:
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
       
-      - name: 安装 TightVNC 2.8.81 服务端
+      - name: 安装 RealVNC Server 服务端
         run: |
-          Invoke-WebRequest -Uri "https://www.tightvnc.com/download/2.8.81/tightvnc-2.8.81-gpl-setup-64bit.msi" -OutFile "$env:TEMP\vnc.msi"
-          msiexec /i "$env:TEMP\vnc.msi" /quiet /norestart ADDLOCAL="Server" SET_USECONTROLAUTHENTICATION=0 SET_PASSWORD="Vnc123456"
-      
+          Invoke-WebRequest -Uri "https://downloads.realvnc.com/download/file/vnc.files/VNC-Server-Windows.exe" -OutFile "$env:TEMP\vnc-server.exe"
+          Start-Process -FilePath "$env:TEMP\vnc-server.exe" -ArgumentList "/verysilent", "/norestart" -Wait
+          & "C:\Program Files\RealVNC\VNC Server\vncserver.exe" -service -password "Vnc123456"
+
       - name: 下载 ChmlFrp Windows 客户端
         run: |
           Invoke-WebRequest -Uri "https://chmlfrp.cn/download/chmlfrp-windows-amd64.exe" -OutFile "C:\chmlfrp.exe"
