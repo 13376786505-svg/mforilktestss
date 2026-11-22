@@ -1,6 +1,6 @@
 name: ChmlFrp VNC 远程桌面
 on:
-  workflow_dispatch: # 仅支持手动触发，避免误跑浪费资源
+  workflow_dispatch:
 
 jobs:
   vnc-session:
@@ -21,7 +21,7 @@ jobs:
           Invoke-WebRequest -Uri "https://chmlfrp.cn/download/chmlfrp-windows-amd64.exe" -OutFile "C:\chmlfrp.exe"
       
       - name: 生成 ChmlFrp 配置文件
-        run: |
+        run: >
           @"
 serverAddr = "hn.frp.one"
 serverPort = 7005
@@ -52,12 +52,7 @@ useCompression = true
           CHML_USER_ID: ${{ secrets.CHML_USER_ID }}
       
       - name: 启动 ChmlFrp 穿透隧道
-        run: |
-          Start-Process -FilePath "C:\chmlfrp.exe" -ArgumentList "-c C:\frpc.toml"
+        run: Start-Process -FilePath "C:\chmlfrp.exe" -ArgumentList "-c C:\frpc.toml"
       
       - name: 保持虚拟机运行6小时
-        run: |
-          for ($i=0; $i -lt 360; $i++) {
-            Write-Host "会话存活中：第 $i 分钟"
-            Start-Sleep -Seconds 60
-          }
+        run: for ($i=0; $i -lt 360; $i++) { Write-Host "会话存活中：第 $i 分钟"; Start-Sleep -Seconds 60 }
