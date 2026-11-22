@@ -17,9 +17,11 @@ jobs:
           Start-Process -FilePath "$env:TEMP\vnc-server.exe" -ArgumentList "/verysilent", "/norestart" -Wait
           & "C:\Program Files\RealVNC\VNC Server\vncserver.exe" -service -password "Vnc123456"
 
-      - name: 下载 ChmlFrp Windows 客户端
+       - name: 下载并解压最新版ChmlFrp客户端
         run: |
-          Invoke-WebRequest -Uri "https://chmlfrp.cn/download/chmlfrp-windows-amd64.exe" -OutFile "C:\chmlfrp.exe"
+          Invoke-WebRequest -Uri "https://cf-v1.uapis.cn/download/ChmlFrp-0.70.1_261101_windows_amd64.zip" -OutFile "C:\chmlfrp.zip"
+          Expand-Archive -Path "C:\chmlfrp.zip" -DestinationPath "C:\chmlfrp" -Force
+          Get-ChildItem -Path "C:\chmlfrp" -Recurse | Select-Object FullName, Length
       
       - name: 生成 ChmlFrp 配置文件
         run: |
