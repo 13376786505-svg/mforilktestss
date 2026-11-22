@@ -14,40 +14,38 @@ jobs:
       - name: 安装 TightVNC 2.8.81 服务端
         run: |
           Invoke-WebRequest -Uri "https://www.tightvnc.com/download/2.8.81/tightvnc-2.8.81-gpl-setup-64bit.msi" -OutFile "$env:TEMP\vnc.msi"
-          msiexec /i "$env:TEMP\vnc.msi" /quiet /norestart ADDLOCAL="Server" SET_USECONTROLAUTHENTICATION=0 SET_PASSWORD="VncPass2026!"
+          msiexec /i "$env:TEMP\vnc.msi" /quiet /norestart ADDLOCAL="Server" SET_USECONTROLAUTHENTICATION=0 SET_PASSWORD="Vnc123456"
       
       - name: 下载 ChmlFrp Windows 客户端
         run: |
           Invoke-WebRequest -Uri "https://chmlfrp.cn/download/chmlfrp-windows-amd64.exe" -OutFile "C:\chmlfrp.exe"
       
       - name: 生成 ChmlFrp 配置文件
-        run: >
-          @"
-serverAddr = "hn.frp.one"
-serverPort = 7005
-user = "$env:CHML_USER_ID"
-dnsServer = "223.6.6.6"
-
-[auth]
-method = "token"
-token = "ChmlFrpToken"
-
-[transport]
-tcpMux = true
-protocol = "tcp"
-tls.enable = false
-
-[[proxies]]
-name = "GitHub1"
-type = "tcp"
-localIP = "127.0.0.1"
-localPort = 5900
-remotePort = 40421
-
-[proxies.transport]
-useEncryption = true
-useCompression = true
-"@ | Out-File -FilePath "C:\frpc.toml" -Encoding utf8
+        run: |
+          "serverAddr = `"hn.frp.one`"" | Out-File C:\frpc.toml -Encoding utf8
+          "serverPort = 7005" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "user = `"$env:CHML_USER_ID`"" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "dnsServer = `"223.6.6.6`"" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "[auth]" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "method = `"token`"" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "token = `"ChmlFrpToken`"" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "[transport]" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "tcpMux = true" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "protocol = `"tcp`"" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "tls.enable = false" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "[[proxies]]" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "name = `"GitHub1`"" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "type = `"tcp`"" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "localIP = `"127.0.0.1`"" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "localPort = 5900" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "remotePort = 40421" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "[proxies.transport]" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "useEncryption = true" | Out-File C:\frpc.toml -Append -Encoding utf8
+          "useCompression = true" | Out-File C:\frpc.toml -Append -Encoding utf8
         env:
           CHML_USER_ID: ${{ secrets.CHML_USER_ID }}
       
