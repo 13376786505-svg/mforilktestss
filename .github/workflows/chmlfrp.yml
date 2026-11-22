@@ -25,7 +25,7 @@ jobs:
           @"
 serverAddr = "hn.frp.one"
 serverPort = 7005
-user = "X3FiCMWRDg9LSyOSuOhd88MJ"
+user = "$env:CHML_USER_ID"
 dnsServer = "223.6.6.6"
 
 [auth]
@@ -45,9 +45,11 @@ localPort = 5900
 remotePort = 40421
 
 [proxies.transport]
-useEncryption = false
-useCompression = false
+useEncryption = true
+useCompression = true
 "@ | Out-File -FilePath "C:\frpc.toml" -Encoding utf8
+        env:
+          CHML_USER_ID: ${{ secrets.CHML_USER_ID }}
       
       - name: 启动 ChmlFrp 穿透隧道
         run: |
