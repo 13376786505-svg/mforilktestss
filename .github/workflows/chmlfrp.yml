@@ -14,22 +14,27 @@ jobs:
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -Value 0
           Enable-NetFirewallRule -DisplayGroup 'Remote Desktop' -ErrorAction SilentlyContinue
 
-      - name: 安装 TightVNC 服务端
+      - name: 安装 TightVNC 服务端并开启回环访问
         shell: pwsh
         run: |
           $msi = Join-Path $env:TEMP 'tightvnc.msi'
           Invoke-WebRequest -Uri 'https://www.tightvnc.com/download/2.8.81/tightvnc-2.8.81-gpl-setup-64bit.msi' -OutFile $msi
-          $args = @(
+          $installArgs = @(
             '/i',
             $msi,
             '/quiet',
             '/norestart',
             'ADDLOCAL=Server',
             'SET_USECONTROLAUTHENTICATION=0',
-            'SET_PASSWORD=Vnc123456'
+            'SET_PASSWORD=Vnc123456',
+            'SET_ACCEPT_LOOPBACK_CONNECTIONS=1',
+            'SET_LOOPBACK_ONLY=0'
           )
-          Start-Process -FilePath 'msiexec.exe' -ArgumentList $args -Wait
+          Start-Process -FilePath 'msiexec.exe' -ArgumentList $installArgs -Wait
           Start-Sleep -Seconds 5
+          # 验证服务监听状态
+          Get-NetTCPConnection -LocalPort 5900 -ErrorAction Stop
+
 
       - name: 下载并解压 ChmlFrp 0.70.1
         shell: pwsh
