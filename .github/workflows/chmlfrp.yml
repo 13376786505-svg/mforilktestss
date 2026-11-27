@@ -1,59 +1,101 @@
 name: ChmlFrp VNC 远程桌面
+
 on:
   workflow_dispatch:
 
 jobs:
   vnc-session:
     runs-on: windows-latest
-    steps:
-      - name: 开启远程桌面与防火墙规则
-        run: |
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-      
-      - name: 安装 RealVNC Server 服务端
-        run: |
-          Invoke-WebRequest -Uri "https://downloads.realvnc.com/download/file/vnc.files/VNC-Server-Windows.exe" -OutFile "$env:TEMP\vnc-server.exe"
-          Start-Process -FilePath "$env:TEMP\vnc-server.exe" -ArgumentList "/verysilent", "/norestart" -Wait
-          & "C:\Program Files\RealVNC\VNC Server\vncserver.exe" -service -password "Vnc123456"
 
-       - name: 下载并解压最新版ChmlFrp客户端
+    steps:
+      - name: 开启远程桌面
+        shell: pwsh
         run: |
-          Invoke-WebRequest -Uri "https://cf-v1.uapis.cn/download/ChmlFrp-0.70.1_261101_windows_amd64.zip" -OutFile "C:\chmlfrp.zip"
-          Expand-Archive -Path "C:\chmlfrp.zip" -DestinationPath "C:\chmlfrp" -Force
-          Get-ChildItem -Path "C:\chmlfrp" -Recurse | Select-Object FullName, Length
-      
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -Value 0
+          Enable-NetFirewallRule -DisplayGroup 'Remote Desktop' -ErrorAction SilentlyContinue
+
+      - name: 安装 TightVNC 服务端
+        shell: pwsh
+        run: |
+          $msi = Join-Path $env:TEMP 'tightvnc.msi'
+          Invoke-WebRequest -Uri 'https://www.tightvnc.com/download/2.8.81/tightvnc-2.8.81-gpl-setup-64bit.msi' -OutFile $msi
+          $args = @(
+            '/i',
+            $msi,
+            '/quiet',
+            '/norestart',
+            'ADDLOCAL=Server',
+            'SET_USECONTROLAUTHENTICATION=0',
+            'SET_PASSWORD=Vnc123456'
+          )
+          Start-Process -FilePath 'msiexec.exe' -ArgumentList $args -Wait
+          Start-Sleep -Seconds 5
+
+      - name: 下载并解压 ChmlFrp 0.70.1
+        shell: pwsh
+        run: |
+          $zip = 'C:\chmlfrp.zip'
+          $dir = 'C:\chmlfrp'
+          Invoke-WebRequest -Uri 'https://cf-v1.uapis.cn/download/ChmlFrp-0.70.1_261101_windows_amd64.zip' -OutFile $zip
+          if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
+          Expand-Archive -Path $zip -DestinationPath $dir -Force
+          Get-ChildItem -Path $dir -Recurse -File | Select-Object FullName, Length
+
       - name: 生成 ChmlFrp 配置文件
-        run: |
-          "serverAddr = `"hn.frp.one`"" | Out-File C:\frpc.toml -Encoding utf8
-          "serverPort = 7005" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "user = `"$env:CHML_USER_ID`"" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "dnsServer = `"223.6.6.6`"" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "[auth]" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "method = `"token`"" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "token = `"ChmlFrpToken`"" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "[transport]" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "tcpMux = true" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "protocol = `"tcp`"" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "tls.enable = false" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "[[proxies]]" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "name = `"GitHub1`"" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "type = `"tcp`"" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "localIP = `"127.0.0.1`"" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "localPort = 5900" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "remotePort = 40421" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "[proxies.transport]" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "useEncryption = true" | Out-File C:\frpc.toml -Append -Encoding utf8
-          "useCompression = true" | Out-File C:\frpc.toml -Append -Encoding utf8
+        shell: pwsh
         env:
           CHML_USER_ID: ${{ secrets.CHML_USER_ID }}
-      
-      - name: 启动 ChmlFrp 穿透隧道
-        run: Start-Process -FilePath "C:\chmlfrp.exe" -ArgumentList "-c C:\frpc.toml"
-      
+        run: |
+          $lines = @(
+            'serverAddr = "hn.frp.one"',
+            'serverPort = 7005',
+            "user = `"$env:CHML_USER_ID`"",
+            'dnsServer = "223.6.6.6"',
+            '',
+            '[auth]',
+            'method = "token"',
+            'token = "ChmlFrpToken"',
+            '',
+            '[transport]',
+            'tcpMux = true',
+            'protocol = "tcp"',
+            'tls.enable = false',
+            '',
+            '[[proxies]]',
+            'name = "GitHub1"',
+            'type = "tcp"',
+            'localIP = "127.0.0.1"',
+            'localPort = 5900',
+            'remotePort = 40421',
+            '',
+            '[proxies.transport]',
+            'useEncryption = true',
+            'useCompression = true'
+          )
+          $lines | Set-Content -Path 'C:\frpc.toml' -Encoding UTF8
+          Get-Content 'C:\frpc.toml'
+
+      - name: 启动桌面进程
+        shell: pwsh
+        run: |
+          Start-Process explorer.exe -ErrorAction SilentlyContinue
+
+      - name: 启动 ChmlFrp 隧道
+        shell: pwsh
+        run: |
+          $frpc = Get-ChildItem -Path 'C:\chmlfrp' -Recurse -File -Include '*.exe' | Select-Object -First 1
+          if ($null -eq $frpc) {
+            throw '解压目录中没有找到 ChmlFrp 可执行文件'
+          }
+          Write-Host "ChmlFrp 路径：$($frpc.FullName)"
+          Start-Process -FilePath $frpc.FullName -ArgumentList '-c C:\frpc.toml'
+          Start-Sleep -Seconds 10
+          Get-NetTCPConnection -LocalPort 5900 -ErrorAction SilentlyContinue
+
       - name: 保持虚拟机运行6小时
-        run: for ($i=0; $i -lt 360; $i++) { Write-Host "会话存活中：第 $i 分钟"; Start-Sleep -Seconds 60 }
+        shell: pwsh
+        run: |
+          for ($i = 1; $i -le 360; $i++) {
+            Write-Host "会话存活中：第 $i 分钟"
+            Start-Sleep -Seconds 60
+          }
